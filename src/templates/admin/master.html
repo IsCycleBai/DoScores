@@ -1,0 +1,87 @@
+{% extends 'admin/base.html' %}
+
+{% block access_control %}
+{% if current_user.is_authenticated %}
+<div class="navbar-text btn-group pull-right">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-primary">返回仪表板</a>
+    <a href="{{ url_for('logout') }}" class="btn btn-danger">退出</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block head_css %}
+{{ super() }}
+<style>
+    .navbar {
+        background-color: #3b82f6 !important;
+    }
+    .navbar-brand {
+        color: white !important;
+    }
+    .nav-link {
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+    .nav-link:hover {
+        color: white !important;
+    }
+    .btn-primary {
+        background-color: #2563eb;
+        border-color: #2563eb;
+    }
+    .btn-primary:hover {
+        background-color: #1d4ed8;
+        border-color: #1d4ed8;
+    }
+    @media (prefers-color-scheme: dark) {
+        body {
+            background-color: #1f2937;
+            color: #e5e7eb;
+        }
+        .table {
+            color: #e5e7eb;
+        }
+        .table thead th {
+            border-bottom-color: #374151;
+        }
+        .table td, .table th {
+            border-top-color: #374151;
+        }
+        .form-control {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #e5e7eb;
+        }
+        .form-control:focus {
+            background-color: #4b5563;
+            border-color: #6b7280;
+            color: #e5e7eb;
+        }
+        .card {
+            background-color: #2d3748;
+            border-color: #4a5568;
+        }
+        .card-header {
+            background-color: #2d3748;
+            border-bottom-color: #4a5568;
+        }
+        .list-group-item {
+            background-color: #2d3748;
+            border-color: #4a5568;
+            color: #e5e7eb;
+        }
+        .modal-content {
+            background-color: #2d3748;
+            border-color: #4a5568;
+        }
+        .modal-header {
+            border-bottom-color: #4a5568;
+        }
+        .modal-footer {
+            border-top-color: #4a5568;
+        }
+        .close {
+            color: #e5e7eb;
+        }
+    }
+</style>
+{% endblock %}

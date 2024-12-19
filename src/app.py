@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 import asyncio
 from asgiref.wsgi import WsgiToAsgi
+from admin import init_admin
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from authlib.integrations.flask_client import OAuth
 from models.models import db, User, App, ScoreConsumption, ScoreTransfer
@@ -26,6 +27,9 @@ db.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# 初始化管理后台
+admin = init_admin(app, db)
 
 # OAuth2配置
 oauth = OAuth(app)
@@ -190,6 +194,9 @@ async def oauth2_callback():
 @app.route('/dashboard')
 @login_required
 def dashboard():
+    # 检查是否是管理员
+    if current_user.username == os.getenv('ADMIN_USERNAME'):
+        flash('管理员可以访问 <a href="/admin/" class="text-primary hover:text-primary-dark">管理后台</a>', 'info')
     # 获取消耗记录
     consumptions = ScoreConsumption.query.filter_by(user_id=current_user.id)\
         .order_by(ScoreConsumption.created_at.desc())\
