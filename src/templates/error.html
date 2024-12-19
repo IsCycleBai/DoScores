@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}DoScores - 错误{% endblock %}
+
+{% block content %}
+<div class="min-h-[50vh] flex items-center justify-center">
+    <div class="text-center">
+        <div class="text-6xl font-bold text-primary mb-4">{{ error_code }}</div>
+        <h1 class="text-2xl font-bold mb-4">{{ error_message }}</h1>
+        <p class="text-gray-600 dark:text-gray-400 mb-8">抱歉，发生了一些错误。</p>
+        <div class="space-x-4">
+            <a href="{{ url_for('index') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-primary hover:bg-primary-dark">
+                返回首页
+            </a>
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('dashboard') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                返回仪表板
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="mt-12 text-center">
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+        如果问题持续存在，请联系管理员或在论坛反馈。
+    </p>
+</div>
+{% endblock %}

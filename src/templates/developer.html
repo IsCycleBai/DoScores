@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}DoScores - 开发者中心{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-8">
+    <div>
+        <h1 class="text-2xl font-bold">开发者中心</h1>
+        <p class="text-gray-600 dark:text-gray-400">管理您的应用并查看API文档</p>
+    </div>
+    <a href="{{ url_for('playground') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        API Playground
+    </a>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6 mb-8">
+    <div class="lg:col-span-2">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">我的应用</h2>
+            <div class="space-y-4">
+                {% for app in apps %}
+                <div class="border dark:border-gray-700 rounded-lg p-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="text-lg font-medium">{{ app.name }}</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">{{ app.description or '暂无描述' }}</p>
+                        </div>
+                        <button onclick="showAppDetails('{{ app.id }}')" class="text-primary hover:text-primary-dark">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="app-{{ app.id }}-details" class="hidden mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                        <div class="space-y-2">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                                <div class="mt-1 flex rounded-md shadow-sm">
+                                    <input type="text" readonly value="{{ app.client_id }}" class="flex-1 min-w-0 block w-full px-3 py-2 rounded-md text-sm bg-gray-100 dark:bg-gray-800">
+                                    <button onclick="copyToClipboard('{{ app.client_id }}')" class="ml-2 inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                        复制
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                                <div class="mt-1 flex rounded-md shadow-sm">
+                                    <input type="password" readonly value="{{ app.client_secret }}" class="flex-1 min-w-0 block w-full px-3 py-2 rounded-md text-sm bg-gray-100 dark:bg-gray-800">
+                                    <button onclick="toggleSecret(this)" class="ml-2 inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                        显示
+                                    </button>
+                                    <button onclick="copyToClipboard('{{ app.client_secret }}')" class="ml-2 inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                        复制
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">回调地址</label>
+                                <div class="mt-1">
+                                    <input type="text" readonly value="{{ app.redirect_uri }}" class="block w-full px-3 py-2 rounded-md text-sm bg-gray-100 dark:bg-gray-800">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-center text-gray-500 dark:text-gray-400 py-8">
+                    暂无应用，点击右侧创建新应用
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="lg:col-span-1">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+            <h2 class="text-lg font-semibold mb-4">创建新应用</h2>
+            <form id="create-app-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">应用名称</label>
+                    <input type="text" name="name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-900">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">应用描述</label>
+                    <textarea name="description" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-900"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">回调地址</label>
+                    <input type="url" name="redirect_uri" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-900">
+                </div>
+                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    创建应用
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+    <h2 class="text-lg font-semibold mb-4">API文档</h2>
+    <div class="prose dark:prose-invert max-w-none">
+        <h3>认证</h3>
+        <p>所有API请求都需要在Header中包含应用的认证信息：</p>
+        <pre class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto"><code>Authorization: your-client-id:your-client-secret</code></pre>
+
+        <h3 class="mt-8">消耗点数</h3>
+        <p>请求消耗指定用户的点数。需要用户在确认页面确认后才会实际扣除点数。</p>
+        <pre class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto"><code>POST /api/score/consume
+Content-Type: application/json
+
+{
+    "username": "用户名",     // 必需，论坛用户名
+    "amount": 10,           // 必需，消耗点数
+    "purpose": "购买服务"    // 可选，用途说明
+}</code></pre>
+
+        <h3 class="mt-8">转账点数</h3>
+        <p>向其他用户转账点数。需要用户在确认页面确认后才会实际转账。</p>
+        <pre class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto"><code>POST /api/score/transfer
+Content-Type: application/json
+
+{
+    "username": "用户名",     // 必需，接收方用户名
+    "amount": 10,           // 必需，转账点数
+    "message": "赠送"       // 可选，转账说明
+}</code></pre>
+
+        <h3 class="mt-8">响应示例</h3>
+        <div class="space-y-4">
+            <div>
+                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">请求成功（返回确认URL）</h4>
+                <pre class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto"><code>{
+    "success": true,
+    "confirm_url": "http://localhost:8181/confirm/abc123...",
+    "consumption_id": 1  // 或 transfer_id: 1
+}</code></pre>
+            </div>
+
+            <div>
+                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">确认成功</h4>
+                <pre class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto"><code>// 消耗点数
+{
+    "success": true,
+    "username": "example_user",
+    "consumed": 10,
+    "remaining_score": 90
+}
+
+// 转账点数
+{
+    "success": true,
+    "from_username": "sender",
+    "to_username": "receiver",
+    "amount": 10,
+    "remaining_score": 90
+}</code></pre>
+            </div>
+            
+            <div>
+                <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">错误响应</h4>
+                <pre class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto"><code>{
+    "error": "用户点数不足",
+    "current_score": 5
+}
+
+{
+    "error": "用户拒绝了操作"
+}</code></pre>
+            </div>
+        </div>
+
+        <h3 class="mt-8">确认流程</h3>
+        <div class="space-y-4">
+            <p>
+                1. 调用API获取确认URL
+            </p>
+            <p>
+                2. 在新窗口中打开确认URL（添加<code>?popup=1</code>参数以启用弹窗模式）
+            </p>
+            <p>
+                3. 监听确认窗口的消息事件获取结果：
+            </p>
+            <pre class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto"><code>const confirmWindow = window.open(confirm_url + '?popup=1', 'confirm',
+    'width=600,height=600');
+
+window.addEventListener('message', function(event) {
+    if (event.data.success) {
+        // 操作成功
+        console.log(event.data);
+    } else {
+        // 操作失败或被取消
+        console.error(event.data.error);
+    }
+});</code></pre>
+        </div>
+
+        <h3 class="mt-8">在线调试</h3>
+        <p>
+            您可以使用 <a href="{{ url_for('playground') }}" class="text-primary hover:text-primary-dark">API Playground</a> 
+            在线测试API接口，支持实时请求预览和响应展示。
+        </p>
+    </div>
+</div>
+
+<script>
+function showAppDetails(appId) {
+    const details = document.getElementById(`app-${appId}-details`);
+    details.classList.toggle('hidden');
+}
+
+function toggleSecret(button) {
+    const input = button.parentElement.querySelector('input');
+    if (input.type === 'password') {
+        input.type = 'text';
+        button.textContent = '隐藏';
+    } else {
+        input.type = 'password';
+        button.textContent = '显示';
+    }
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('已复制到剪贴板');
+    }).catch(err => {
+        console.error('复制失败:', err);
+    });
+}
+
+document.getElementById('create-app-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        redirect_uri: formData.get('redirect_uri')
+    };
+
+    try {
+        const response = await fetch('/api/apps', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const error = await response.json();
+            alert(error.error || '创建应用失败');
+        }
+    } catch (err) {
+        console.error('创建应用失败:', err);
+        alert('创建应用失败，请重试');
+    }
+});
+</script>
+{% endblock %}

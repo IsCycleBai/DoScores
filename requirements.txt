@@ -1,0 +1,12 @@
+Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+Flask-Login==0.6.2
+requests==2.31.0
+python-jose==3.3.0
+python-dotenv==1.0.0
+Authlib==1.2.1
+httpx==0.24.1
+PyJWT==2.8.0
+Werkzeug==2.3.7
+uvicorn==0.24.0
+asgiref==3.7.2

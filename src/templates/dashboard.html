@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}DoScores - 仪表板{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-2xl font-bold mb-2">欢迎回来，{{ current_user.name }}</h1>
+    <p class="text-gray-600 dark:text-gray-400">
+        信任等级: {{ current_user.trust_level }}
+        {% if current_user.trust_level >= 1 %}
+        <span class="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 rounded-full">可创建应用</span>
+        {% endif %}
+    </p>
+</div>
+
+<div class="grid md:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+        <h2 class="text-lg font-semibold mb-4">点数信息</h2>
+        <div class="space-y-4">
+            <div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">原始点数</div>
+                <div class="text-3xl font-bold text-primary">{{ current_user.original_score }}</div>
+            </div>
+            <div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">实际点数</div>
+                <div class="text-3xl font-bold">{{ current_user.actual_score }}</div>
+            </div>
+            <div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">已消耗点数</div>
+                <div class="text-3xl font-bold text-red-500">{{ current_user.original_score - current_user.actual_score }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+        <h2 class="text-lg font-semibold mb-4">账号信息</h2>
+        <div class="space-y-4">
+            <div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">用户名</div>
+                <div class="font-medium">{{ current_user.username }}</div>
+            </div>
+            <div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">论坛ID</div>
+                <div class="font-medium">{{ current_user.forum_id }}</div>
+            </div>
+            <div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">最后更新</div>
+                <div class="font-medium">{{ current_user.last_updated.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+    <div class="p-6">
+        <h2 class="text-lg font-semibold mb-4">点数记录</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">时间</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">类型</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">应用/用户</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">点数</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">说明</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">状态</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {% for record in records %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">{{ record.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        {% if record.__class__.__name__ == 'ScoreConsumption' %}
+                        <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100 rounded-full">消耗</span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 rounded-full">转账</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        {% if record.__class__.__name__ == 'ScoreConsumption' %}
+                        {{ record.app.name }}
+                        {% else %}
+                        {% if record.from_user_id == current_user.id %}
+                        转给 {{ record.to_user.username }}
+                        {% else %}
+                        来自 {{ record.from_user.username }}
+                        {% endif %}
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        {% if record.__class__.__name__ == 'ScoreConsumption' or record.from_user_id == current_user.id %}
+                        <span class="text-red-500">-{{ record.amount }}</span>
+                        {% else %}
+                        <span class="text-green-500">+{{ record.amount }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        {% if record.__class__.__name__ == 'ScoreConsumption' %}
+                        {{ record.purpose or '未说明' }}
+                        {% else %}
+                        {{ record.message or '未说明' }}
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        {% if record.status == 'pending' %}
+                        <span class="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100 rounded-full">待确认</span>
+                        {% elif record.status == 'confirmed' %}
+                        <span class="px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 rounded-full">已确认</span>
+                        {% else %}
+                        <span class="px-2 py-1 text-xs bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100 rounded-full">已拒绝</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">暂无记录</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if current_user.trust_level >= 1 %}
+<div class="mt-8 text-center">
+    <a href="{{ url_for('developer') }}" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary hover:bg-primary-dark">
+        进入开发者中心
+    </a>
+</div>
+{% endif %}
+{% endblock %}

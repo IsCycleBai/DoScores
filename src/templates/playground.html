@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}DoScores - API Playground{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-2xl font-bold mb-2">API Playground</h1>
+    <p class="text-gray-600 dark:text-gray-400">在线测试API接口</p>
+</div>
+
+<div class="grid lg:grid-cols-2 gap-6">
+    <div class="space-y-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+            <h2 class="text-lg font-semibold mb-4">请求参数</h2>
+            <form id="api-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">选择应用</label>
+                    <select id="app-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-primary focus:border-primary rounded-md dark:bg-gray-900">
+                        <option value="">选择应用...</option>
+                        {% for app in apps %}
+                        <option value="{{ app.id }}" data-client-id="{{ app.client_id }}" data-client-secret="{{ app.client_secret }}">{{ app.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+                        <input type="text" id="client-id" readonly class="mt-1 block w-full px-3 py-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Secret</label>
+                        <input type="password" id="client-secret" readonly class="mt-1 block w-full px-3 py-2 bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">用户名</label>
+                    <input type="text" id="username" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-900">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">消耗点数</label>
+                    <input type="number" id="amount" required min="1" class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-900">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">用途说明</label>
+                    <input type="text" id="purpose" class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-900">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                        消耗点数
+                    </button>
+                    <button type="button" onclick="showTransferForm()" class="w-full flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        转账点数
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+            <h2 class="text-lg font-semibold mb-4">请求示例</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">cURL</label>
+                    <pre id="curl-example" class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto text-sm"></pre>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Python</label>
+                    <pre id="python-example" class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto text-sm"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        <h2 class="text-lg font-semibold mb-4">响应结果</h2>
+        <pre id="response" class="bg-gray-100 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto min-h-[200px] text-sm">等待请求...</pre>
+    </div>
+</div>
+
+<script>
+document.getElementById('app-select').addEventListener('change', function() {
+    const option = this.options[this.selectedIndex];
+    document.getElementById('client-id').value = option.dataset.clientId || '';
+    document.getElementById('client-secret').value = option.dataset.clientSecret || '';
+    updateExamples();
+});
+
+function updateExamples() {
+    const clientId = document.getElementById('client-id').value;
+    const clientSecret = document.getElementById('client-secret').value;
+    const username = document.getElementById('username').value || 'example_user';
+    const amount = document.getElementById('amount').value || '10';
+    const purpose = document.getElementById('purpose').value || '测试消耗';
+
+    // cURL示例
+    const curlExample = `curl -X POST \\
+  'http://localhost:8181/api/score/consume' \\
+  -H 'Authorization: ${clientId}:${clientSecret}' \\
+  -H 'Content-Type: application/json' \\
+  -d '{
+    "username": "${username}",
+    "amount": ${amount},
+    "purpose": "${purpose}"
+  }'`;
+
+    // Python示例
+    const pythonExample = `import requests
+
+headers = {
+    'Authorization': '${clientId}:${clientSecret}',
+    'Content-Type': 'application/json'
+}
+
+data = {
+    'username': '${username}',
+    'amount': ${amount},
+    'purpose': '${purpose}'
+}
+
+response = requests.post(
+    'http://localhost:8181/api/score/consume',
+    headers=headers,
+    json=data
+)
+
+print(response.json())`;
+
+    document.getElementById('curl-example').textContent = curlExample;
+    document.getElementById('python-example').textContent = pythonExample;
+}
+
+document.getElementById('api-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const clientId = document.getElementById('client-id').value;
+    const clientSecret = document.getElementById('client-secret').value;
+    const username = document.getElementById('username').value;
+    const amount = document.getElementById('amount').value;
+    const purpose = document.getElementById('purpose').value;
+    
+    if (!clientId || !clientSecret) {
+        alert('请先选择应用');
+        return;
+    }
+    
+    const response = document.getElementById('response');
+    response.textContent = '发送请求中...';
+    
+    try {
+        const result = await fetch('/api/score/consume', {
+            method: 'POST',
+            headers: {
+                'Authorization': `${clientId}:${clientSecret}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                username: username,
+                amount: parseInt(amount),
+                purpose: purpose
+            })
+        });
+        
+        const data = await result.json();
+        response.textContent = JSON.stringify(data, null, 2);
+
+        // 如果返回确认URL，打开确认窗口
+        if (data.success && data.confirm_url) {
+            const confirmWindow = window.open(data.confirm_url + '?popup=1', 'confirm',
+                'width=600,height=600,location=no,menubar=no,toolbar=no,status=no,scrollbars=yes,resizable=yes');
+            
+            // 监听确认窗口的消息
+            window.addEventListener('message', function(event) {
+                if (event.data.success) {
+                    response.textContent = JSON.stringify(event.data, null, 2);
+                } else {
+                    response.textContent = JSON.stringify({
+                        error: event.data.error || '操作被取消'
+                    }, null, 2);
+                }
+            }, { once: true });
+        }
+    } catch (error) {
+        response.textContent = `请求失败: ${error.message}`;
+    }
+});
+
+// 监听输入变化，更新示例
+['username', 'amount', 'purpose'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateExamples);
+});
+
+// 转账表单处理
+async function showTransferForm() {
+    const username = document.getElementById('username').value;
+    const amount = document.getElementById('amount').value;
+    const purpose = document.getElementById('purpose').value;
+
+    if (!username || !amount) {
+        alert('请填写用户名和点数');
+        return;
+    }
+
+    const response = document.getElementById('response');
+    response.textContent = '发送转账请求...';
+
+    try {
+        const result = await fetch('/api/score/transfer', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                username: username,
+                amount: parseInt(amount),
+                message: purpose
+            })
+        });
+
+        const data = await result.json();
+        response.textContent = JSON.stringify(data, null, 2);
+
+        // 如果返回确认URL，打开确认窗口
+        if (data.success && data.confirm_url) {
+            const confirmWindow = window.open(data.confirm_url + '?popup=1', 'confirm',
+                'width=600,height=600,location=no,menubar=no,toolbar=no,status=no,scrollbars=yes,resizable=yes');
+            
+            // 监听确认窗口的消息
+            window.addEventListener('message', function(event) {
+                if (event.data.success) {
+                    response.textContent = JSON.stringify(event.data, null, 2);
+                } else {
+                    response.textContent = JSON.stringify({
+                        error: event.data.error || '操作被取消'
+                    }, null, 2);
+                }
+            }, { once: true });
+        }
+    } catch (error) {
+        response.textContent = `转账失败: ${error.message}`;
+    }
+}
+
+// 初始化示例
+updateExamples();
+</script>
+{% endblock %}

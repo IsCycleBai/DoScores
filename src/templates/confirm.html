@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}DoScores - 操作确认{% endblock %}
+
+{% block content %}
+<div class="min-h-[50vh] flex items-center justify-center">
+    <div class="w-full max-w-lg">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+            {% if operation == 'consume' %}
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-bold mb-2">确认点数消耗</h1>
+                <p class="text-gray-600 dark:text-gray-400">应用"{{ consumption.app.name }}"请求消耗您的点数</p>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">消耗点数</div>
+                            <div class="text-2xl font-bold text-red-500">-{{ consumption.amount }}</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">剩余点数</div>
+                            <div class="text-2xl font-bold">{{ current_user.actual_score - consumption.amount }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if consumption.purpose %}
+                <div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">用途说明</div>
+                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                        {{ consumption.purpose }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="submitAction('confirm')" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                        确认消耗
+                    </button>
+                    <button onclick="submitAction('reject')" class="w-full py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        拒绝
+                    </button>
+                </div>
+            </div>
+            {% elif operation == 'transfer' %}
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-bold mb-2">确认点数转账</h1>
+                <p class="text-gray-600 dark:text-gray-400">向用户"{{ transfer.to_user.username }}"转账点数</p>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">转账点数</div>
+                            <div class="text-2xl font-bold text-red-500">-{{ transfer.amount }}</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">剩余点数</div>
+                            <div class="text-2xl font-bold">{{ current_user.actual_score - transfer.amount }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if transfer.message %}
+                <div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">转账说明</div>
+                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                        {{ transfer.message }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="submitAction('confirm')" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                        确认转账
+                    </button>
+                    <button onclick="submitAction('reject')" class="w-full py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                        拒绝
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="mt-4 text-center">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                此确认链接仅能使用一次，请谨慎操作
+            </p>
+        </div>
+    </div>
+</div>
+
+{% if is_popup %}
+<script>
+window.addEventListener('message', function(event) {
+    if (event.data === 'close') {
+        window.close();
+    }
+});
+
+async function submitAction(action) {
+    try {
+        const url = '{{ url_for("confirm_consumption", token=consumption.confirm_token) if operation == "consume" else url_for("confirm_transfer", token=transfer.confirm_token) }}';
+        const formData = new FormData();
+        formData.append('action', action);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        window.opener.postMessage(result, '*');
+        window.close();
+    } catch (error) {
+        console.error('确认操作失败:', error);
+        alert('确认操作失败，请重试');
+    }
+}
+</script>
+{% endif %}
+{% endblock %}
