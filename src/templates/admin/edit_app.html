@@ -1,0 +1,97 @@
+{% extends "admin/master.html" %}
+
+{% block title %}编辑应用 - 管理后台{% endblock %}
+
+{% block page_title %}编辑应用{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="name" class="form-label">应用名称</label>
+                    <input type="text" class="form-control" id="name" name="name" value="{{ app.name }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="redirect_uri" class="form-label">重定向URI</label>
+                    <input type="url" class="form-control" id="redirect_uri" name="redirect_uri" value="{{ app.redirect_uri }}" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12 mb-3">
+                    <label for="description" class="form-label">应用描述</label>
+                    <textarea class="form-control" id="description" name="description" rows="3">{{ app.description }}</textarea>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <h5>应用信息</h5>
+                        <p class="mb-0">
+                            <strong>应用ID:</strong> {{ app.id }}<br>
+                            <strong>所有者:</strong> {{ app.owner.username }}<br>
+                            <strong>Client ID:</strong> <code>{{ app.client_id }}</code><br>
+                            <strong>Client Secret:</strong> <code>{{ app.client_secret }}</code><br>
+                            <strong>创建时间:</strong> {{ app.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> 保存更改
+                    </button>
+                    <a href="{{ url_for('admin.apps') }}" class="btn btn-secondary">
+                        <i class="bi bi-x-lg"></i> 取消
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">消费记录</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>用户</th>
+                                <th>数量</th>
+                                <th>用途</th>
+                                <th>状态</th>
+                                <th>时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for consumption in app.consumptions %}
+                            <tr>
+                                <td>{{ consumption.user.username }}</td>
+                                <td>{{ consumption.amount }}</td>
+                                <td>{{ consumption.purpose }}</td>
+                                <td>
+                                    <span class="badge {% if consumption.status == 'confirmed' %}bg-success{% elif consumption.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ consumption.status }}
+                                    </span>
+                                </td>
+                                <td>{{ consumption.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

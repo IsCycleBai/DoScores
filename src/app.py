@@ -20,6 +20,10 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', os.urandom(24))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///scores.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'  # 生产环境才启用HTTPS-only
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # 防止JavaScript访问cookie
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)  # session过期时间
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # 防止CSRF攻击
 
 # 初始化扩展
 db.init_app(app)
@@ -109,11 +113,25 @@ def index():
 @app.route('/login')
 def login():
     redirect_uri = url_for('oauth2_callback', _external=True)
-    return oauth.linux_do.authorize_redirect(redirect_uri)
+    # 生成随机state并存储在session中
+    state = secrets.token_urlsafe(16)
+    session['oauth_state'] = state
+    return oauth.linux_do.authorize_redirect(redirect_uri, state=state)
 
 @app.route('/oauth2/callback')
 def oauth2_callback():
-    token = oauth.linux_do.authorize_access_token()
+    # 验证state
+    state = session.pop('oauth_state', None)
+    if not state or state != request.args.get('state'):
+        flash('认证失败：状态验证错误')
+        return redirect(url_for('index'))
+    
+    try:
+        token = oauth.linux_do.authorize_access_token()
+    except Exception as e:
+        app.logger.error(f"OAuth认证失败: {str(e)}")
+        flash('认证失败，请重试')
+        return redirect(url_for('index'))
     resp = oauth.linux_do.get('user')
     user_info = resp.json()
     
@@ -182,6 +200,62 @@ def oauth2_callback():
     response = redirect(url_for('dashboard'))
     response.set_cookie('jwt_token', token, httponly=True, max_age=7*24*60*60)
     return response
+
+@app.route('/transfer')
+@login_required
+def transfer_score_page():
+    return render_template('transfer.html')
+
+@app.route('/batch-transfer')
+@login_required
+def batch_transfer():
+    return render_template('batch_transfer.html')
+
+@app.route('/leaderboard')
+@login_required
+def leaderboard():
+    # 获取富豪榜(按实际积分排序)
+    richest_users = User.query.filter_by(show_in_leaderboard=True)\
+        .order_by(User.actual_score.desc())\
+        .limit(10).all()
+    
+    # 获取慷慨榜(按总转出积分排序)
+    most_generous_users = User.query.filter_by(show_in_leaderboard=True)\
+        .order_by(User.total_transferred.desc())\
+        .limit(10).all()
+    
+    # 获取消费榜(按总消耗积分排序)
+    most_consumed_users = User.query.filter_by(show_in_leaderboard=True)\
+        .order_by(User.total_consumed.desc())\
+        .limit(10).all()
+    
+    # 获取所有用户详细排名
+    all_users = User.query.filter_by(show_in_leaderboard=True)\
+        .order_by(User.actual_score.desc())\
+        .all()
+    
+    return render_template('leaderboard.html',
+                         richest_users=richest_users,
+                         most_generous_users=most_generous_users,
+                         most_consumed_users=most_consumed_users,
+                         all_users=all_users)
+
+@app.route('/api/settings/leaderboard', methods=['POST'])
+@login_required
+def update_leaderboard_settings():
+    """更新排行榜显示设置"""
+    data = request.json
+    if data is None or 'show' not in data:
+        return jsonify({'error': '缺少必要参数'}), 400
+    
+    try:
+        current_user.show_in_leaderboard = bool(data['show'])
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"更新排行榜设置失败: {str(e)}")
+        return jsonify({'error': '操作失败'}), 500
 
 @app.route('/dashboard')
 @login_required
@@ -299,6 +373,8 @@ def confirm_consumption(token):
             return jsonify({'error': '点数不足', 'current_score': current_user.actual_score}), 400
         
         current_user.actual_score -= consumption.amount
+        current_user.total_consumed += consumption.amount
+        current_user.total_fee_paid += consumption.fee_amount
         consumption.status = 'confirmed'
         consumption.confirmed_at = datetime.utcnow()
         db.session.commit()
@@ -338,9 +414,24 @@ def confirm_transfer(token):
             return jsonify({'error': '点数不足', 'current_score': current_user.actual_score}), 400
         
         current_user.actual_score -= transfer.amount
-        transfer.to_user.actual_score += transfer.amount
+        current_user.total_transferred += transfer.amount
+        current_user.total_fee_paid += transfer.fee_amount
+        
+        transfer.to_user.actual_score += transfer.actual_amount
+        transfer.to_user.total_received += transfer.actual_amount
+        
         transfer.status = 'confirmed'
         transfer.confirmed_at = datetime.utcnow()
+        
+        # 如果是批量转账,检查是否所有转账都已确认
+        if transfer.type == 'batch':
+            batch_transfers = ScoreTransfer.query.filter_by(
+                batch_id=transfer.batch_id,
+                status='confirmed'
+            ).all()
+            if len(batch_transfers) == ScoreTransfer.query.filter_by(batch_id=transfer.batch_id).count():
+                flash('批量转账已全部完成')
+        
         db.session.commit()
         
         return jsonify({
@@ -380,11 +471,17 @@ def consume_score():
         if user.actual_score < amount:
             return jsonify({'error': '用户点数不足', 'current_score': user.actual_score}), 400
         
+        # 计算开发者实际收到的金额和手续费(3%)
+        fee_amount = int(amount * 0.03)
+        developer_amount = amount - fee_amount
+        
         # 创建待确认的消耗记录
         consumption = ScoreConsumption(
             user_id=user.id,
             app_id=request.current_app.id,
             amount=amount,
+            developer_amount=developer_amount,
+            fee_amount=fee_amount,
             purpose=data.get('purpose', '未说明用途'),
             confirm_token=generate_confirm_token()
         )
@@ -457,6 +554,72 @@ def transfer_score():
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"创建转账请求失败: {str(e)}")
+        return jsonify({'error': '操作失败'}), 500
+
+@app.route('/api/score/batch-transfer', methods=['POST'])
+@login_required
+def batch_transfer_score():
+    """批量转账"""
+    data = request.json
+    if not data or 'transfers' not in data:
+        return jsonify({'error': '缺少必要参数'}), 400
+    
+    transfers = data['transfers']
+    if not transfers or not isinstance(transfers, list):
+        return jsonify({'error': '转账列表格式错误'}), 400
+    
+    # 计算总转账金额
+    total_amount = sum(t.get('amount', 0) for t in transfers)
+    if current_user.actual_score < total_amount:
+        return jsonify({'error': '点数不足', 'current_score': current_user.actual_score}), 400
+    
+    try:
+        batch_id = secrets.token_hex(16)
+        confirm_token = generate_confirm_token()
+        
+        for transfer_data in transfers:
+            username = transfer_data.get('username')
+            amount = int(transfer_data.get('amount', 0))
+            message = transfer_data.get('message', '')
+            
+            if not username or amount <= 0:
+                continue
+                
+            to_user = User.query.filter_by(username=username).first()
+            if not to_user or to_user.id == current_user.id:
+                continue
+            
+            # 计算手续费
+            fee_amount = int(amount * 0.07) if amount > 1000 else 0
+            actual_amount = amount - fee_amount
+            
+            transfer = ScoreTransfer(
+                from_user_id=current_user.id,
+                to_user_id=to_user.id,
+                amount=amount,
+                fee_amount=fee_amount,
+                actual_amount=actual_amount,
+                type='batch',
+                batch_id=batch_id,
+                message=message,
+                confirm_token=confirm_token
+            )
+            db.session.add(transfer)
+        
+        db.session.commit()
+        
+        # 生成确认URL
+        confirm_url = url_for('confirm_page',
+                            token=confirm_token,
+                            _external=True)
+        
+        return jsonify({
+            'success': True,
+            'confirm_url': confirm_url
+        })
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"创建批量转账请求失败: {str(e)}")
         return jsonify({'error': '操作失败'}), 500
 
 asgi_app = WsgiToAsgi(app)

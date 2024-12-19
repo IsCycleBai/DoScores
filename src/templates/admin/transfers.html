@@ -1,0 +1,101 @@
+{% extends "admin/master.html" %}
+
+{% block title %}转账记录 - 管理后台{% endblock %}
+
+{% block page_title %}转账记录{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>转出用户</th>
+                        <th>转入用户</th>
+                        <th>数量</th>
+                        <th>留言</th>
+                        <th>状态</th>
+                        <th>确认令牌</th>
+                        <th>确认时间</th>
+                        <th>创建时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transfer in transfers %}
+                    <tr>
+                        <td>{{ transfer.id }}</td>
+                        <td>{{ transfer.from_user.username }}</td>
+                        <td>{{ transfer.to_user.username }}</td>
+                        <td>{{ transfer.amount }}</td>
+                        <td>{{ transfer.message }}</td>
+                        <td>
+                            <span class="badge {% if transfer.status == 'confirmed' %}bg-success{% elif transfer.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                {{ transfer.status }}
+                            </span>
+                        </td>
+                        <td><code>{{ transfer.confirm_token }}</code></td>
+                        <td>{{ transfer.confirmed_at.strftime('%Y-%m-%d %H:%M') if transfer.confirmed_at else '-' }}</td>
+                        <td>{{ transfer.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">总转账记录数</h5>
+                <p class="card-text display-6">{{ transfers|length }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">已确认转账</h5>
+                <p class="card-text display-6">{{ transfers|selectattr('status', 'equalto', 'confirmed')|list|length }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">待确认转账</h5>
+                <p class="card-text display-6">{{ transfers|selectattr('status', 'equalto', 'pending')|list|length }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">转账金额统计</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        总转账金额
+                        <span class="badge bg-primary rounded-pill">{{ transfers|sum(attribute='amount') }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        已确认转账金额
+                        <span class="badge bg-success rounded-pill">{{ transfers|selectattr('status', 'equalto', 'confirmed')|sum(attribute='amount') }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        待确认转账金额
+                        <span class="badge bg-warning rounded-pill">{{ transfers|selectattr('status', 'equalto', 'pending')|sum(attribute='amount') }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

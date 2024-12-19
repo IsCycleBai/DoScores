@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}收款请求 - DoScores{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    {% if payment_request %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-8 text-center mb-8 shadow">
+        <h1 class="text-2xl font-bold mb-4">{{ payment_request.from_user.username }} 的收款请求</h1>
+        
+        <div class="text-3xl font-bold mb-4">{{ payment_request.amount }} 分</div>
+        
+        {% if payment_request.message %}
+        <p class="text-lg mb-6">{{ payment_request.message }}</p>
+        {% endif %}
+        
+        {% if payment_request.status == 'paid' %}
+        <div class="bg-green-100 dark:bg-green-900 rounded-lg p-6 mb-4">
+            <p class="text-xl">已支付</p>
+            <p class="text-sm mt-2">支付者: {{ payment_request.paid_by.username }}</p>
+            <p class="text-sm">支付时间: {{ payment_request.paid_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+        </div>
+        {% elif payment_request.status == 'cancelled' %}
+        <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-6">
+            <p class="text-xl">已取消</p>
+        </div>
+        {% elif payment_request.is_expired() %}
+        <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-6">
+            <p class="text-xl">已过期</p>
+        </div>
+        {% elif not payment_request.can_pay(current_user) %}
+        <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-6">
+            <p class="text-xl">无法支付</p>
+            {% if current_user.trust_level < payment_request.min_trust_level %}
+            <p class="text-sm mt-2">需要信任等级 {{ payment_request.min_trust_level }}</p>
+            {% endif %}
+        </div>
+        {% elif payment_request.from_user_id == current_user.id %}
+        <div class="space-y-4">
+            <p class="text-lg">这是你发起的收款请求</p>
+            {% if payment_request.status == 'pending' %}
+            <form method="post" action="{{ url_for('cancel_payment_request', token=payment_request.token) }}">
+                <button type="submit" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">
+                    取消请求
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        {% else %}
+        <form method="post" class="mt-4">
+            <button type="submit" class="bg-primary hover:bg-primary-dark text-white font-bold py-3 px-6 rounded-lg text-lg">
+                确认支付
+            </button>
+        </form>
+        {% endif %}
+        
+        {% if payment_request.expires_at %}
+        <div class="mt-4 text-sm">
+            有效期至: {{ payment_request.expires_at.strftime('%Y-%m-%d %H:%M:%S') }}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if current_user.is_authenticated %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow">
+        <h2 class="text-xl font-bold mb-4">发起收款</h2>
+        <form method="post" action="{{ url_for('create_payment_request') }}" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">金额</label>
+                <input type="number" name="amount" required min="1" 
+                       class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-1">说明(可选)</label>
+                <input type="text" name="message" maxlength="256"
+                       class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-1">最低信任等级</label>
+                <input type="number" name="min_trust_level" required min="0" value="0"
+                       class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-1">有效期(小时，可选)</label>
+                <input type="number" name="expire_hours" min="1"
+                       class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+            </div>
+            
+            <button type="submit" 
+                    class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg">
+                发起收款
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

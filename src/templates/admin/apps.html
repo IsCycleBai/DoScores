@@ -1,0 +1,44 @@
+{% extends "admin/master.html" %}
+
+{% block title %}应用管理 - 管理后台{% endblock %}
+
+{% block page_title %}应用管理{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>应用名称</th>
+                        <th>所有者</th>
+                        <th>Client ID</th>
+                        <th>重定向URI</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in apps %}
+                    <tr>
+                        <td>{{ app.id }}</td>
+                        <td>{{ app.name }}</td>
+                        <td>{{ app.owner.username }}</td>
+                        <td><code>{{ app.client_id }}</code></td>
+                        <td>{{ app.redirect_uri }}</td>
+                        <td>{{ app.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <a href="{{ url_for('admin.edit_app', id=app.id) }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-pencil"></i> 编辑
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

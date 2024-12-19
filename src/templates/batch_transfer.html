@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>批量转账</h2>
+    <div class="alert alert-info">
+        注意：单笔转账超过1000积分将收取7%手续费
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <form id="batchTransferForm">
+                <div class="form-group">
+                    <label for="transferList">转账列表 (每行格式: 用户名,金额,备注[可选])</label>
+                    <textarea class="form-control" id="transferList" rows="10" placeholder="example_user,100,新年快乐&#10;another_user,200,生日快乐"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">提交批量转账</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('batchTransferForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const transferList = document.getElementById('transferList').value;
+    const transfers = transferList.split('\n')
+        .map(line => line.trim())
+        .filter(line => line)
+        .map(line => {
+            const [username, amount, message = ''] = line.split(',').map(s => s.trim());
+            return { username, amount: parseInt(amount), message };
+        });
+    
+    if (transfers.length === 0) {
+        alert('请输入有效的转账列表');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/score/batch-transfer', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ transfers })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            window.location.href = result.confirm_url;
+        } else {
+            alert(result.error || '批量转账请求失败');
+        }
+    } catch (error) {
+        alert('提交请求时发生错误');
+        console.error(error);
+    }
+});
+</script>
+{% endblock %}

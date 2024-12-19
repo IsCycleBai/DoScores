@@ -1,0 +1,130 @@
+{% extends "admin/master.html" %}
+
+{% block title %}编辑用户 - 管理后台{% endblock %}
+
+{% block page_title %}编辑用户{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="username" class="form-label">用户名</label>
+                    <input type="text" class="form-control" id="username" name="username" value="{{ user.username }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="name" class="form-label">名称</label>
+                    <input type="text" class="form-control" id="name" name="name" value="{{ user.name }}" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="trust_level" class="form-label">信任等级</label>
+                    <input type="number" class="form-control" id="trust_level" name="trust_level" value="{{ user.trust_level }}" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="original_score" class="form-label">原始点数</label>
+                    <input type="number" class="form-control" id="original_score" name="original_score" value="{{ user.original_score }}" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="actual_score" class="form-label">实际点数</label>
+                    <input type="number" class="form-control" id="actual_score" name="actual_score" value="{{ user.actual_score }}" required>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <h5>用户信息</h5>
+                        <p class="mb-0">
+                            <strong>用户ID:</strong> {{ user.id }}<br>
+                            <strong>论坛ID:</strong> {{ user.forum_id }}<br>
+                            <strong>最后更新:</strong> {{ user.last_updated.strftime('%Y-%m-%d %H:%M') }}<br>
+                            <strong>已消耗点数:</strong> {{ user.consumed_score }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> 保存更改
+                    </button>
+                    <a href="{{ url_for('admin.users') }}" class="btn btn-secondary">
+                        <i class="bi bi-x-lg"></i> 取消
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">应用列表</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>应用名称</th>
+                                <th>创建时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app in user.apps %}
+                            <tr>
+                                <td>{{ app.name }}</td>
+                                <td>{{ app.created_at.strftime('%Y-%m-%d') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">最近消费记录</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>应用</th>
+                                <th>数量</th>
+                                <th>状态</th>
+                                <th>时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for consumption in user.consumptions[:5] %}
+                            <tr>
+                                <td>{{ consumption.app.name }}</td>
+                                <td>{{ consumption.amount }}</td>
+                                <td>
+                                    <span class="badge {% if consumption.status == 'confirmed' %}bg-success{% elif consumption.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ consumption.status }}
+                                    </span>
+                                </td>
+                                <td>{{ consumption.created_at.strftime('%Y-%m-%d') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

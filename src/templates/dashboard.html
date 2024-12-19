@@ -13,7 +13,7 @@
     </p>
 </div>
 
-<div class="grid md:grid-cols-2 gap-6 mb-8">
+<div class="grid md:grid-cols-3 gap-6 mb-8">
     <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
         <h2 class="text-lg font-semibold mb-4">点数信息</h2>
         <div class="space-y-4">
@@ -46,6 +46,56 @@
             <div>
                 <div class="text-sm text-gray-600 dark:text-gray-400">最后更新</div>
                 <div class="font-medium">{{ current_user.last_updated.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+        <h2 class="text-lg font-semibold mb-4">统计信息</h2>
+        <div class="space-y-4">
+            <div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">总转出积分</div>
+                <div class="text-3xl font-bold text-red-500">{{ current_user.total_transferred }}</div>
+            </div>
+            <div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">总收到积分</div>
+                <div class="text-3xl font-bold text-green-500">{{ current_user.total_received }}</div>
+            </div>
+            <div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">总手续费</div>
+                <div class="text-3xl font-bold text-yellow-500">{{ current_user.total_fee_paid }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid md:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+        <h2 class="text-lg font-semibold mb-4">转账功能</h2>
+        <div class="space-y-4">
+            <a href="{{ url_for('transfer_score_page') }}" class="block w-full py-3 px-4 text-center text-white bg-primary hover:bg-primary-dark rounded-lg transition duration-200">
+                单人转账
+            </a>
+            <a href="{{ url_for('batch_transfer') }}" class="block w-full py-3 px-4 text-center text-white bg-primary hover:bg-primary-dark rounded-lg transition duration-200">
+                批量转账
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+        <h2 class="text-lg font-semibold mb-4">排行榜</h2>
+        <div class="space-y-4">
+            <a href="{{ url_for('leaderboard') }}" class="block w-full py-3 px-4 text-center text-white bg-primary hover:bg-primary-dark rounded-lg transition duration-200">
+                查看排行榜
+            </a>
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-600 dark:text-gray-400">在排行榜显示</span>
+                <form id="leaderboardForm" class="inline">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="showInLeaderboard" class="sr-only peer" {% if current_user.show_in_leaderboard %}checked{% endif %}>
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                    </label>
+                </form>
             </div>
         </div>
     </div>

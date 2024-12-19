@@ -47,22 +47,64 @@
             {% elif operation == 'transfer' %}
             <div class="text-center mb-8">
                 <h1 class="text-2xl font-bold mb-2">确认点数转账</h1>
-                <p class="text-gray-600 dark:text-gray-400">向用户"{{ transfer.to_user.username }}"转账点数</p>
+                {% if transfer.type == 'batch' %}
+                    {% set batch_transfers = transfer.__class__.query.filter_by(batch_id=transfer.batch_id).all() %}
+                    <p class="text-gray-600 dark:text-gray-400">批量转账给 {{ batch_transfers|length }} 位用户</p>
+                {% else %}
+                    <p class="text-gray-600 dark:text-gray-400">向用户"{{ transfer.to_user.username }}"转账点数</p>
+                {% endif %}
             </div>
 
             <div class="space-y-6">
-                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <div class="text-sm text-gray-600 dark:text-gray-400">转账点数</div>
-                            <div class="text-2xl font-bold text-red-500">-{{ transfer.amount }}</div>
-                        </div>
-                        <div>
-                            <div class="text-sm text-gray-600 dark:text-gray-400">剩余点数</div>
-                            <div class="text-2xl font-bold">{{ current_user.actual_score - transfer.amount }}</div>
+                {% if transfer.type == 'batch' %}
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead>
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-400">接收用户</th>
+                                    <th class="px-4 py-2 text-right text-sm font-medium text-gray-500 dark:text-gray-400">转账金额</th>
+                                    <th class="px-4 py-2 text-right text-sm font-medium text-gray-500 dark:text-gray-400">手续费</th>
+                                    <th class="px-4 py-2 text-right text-sm font-medium text-gray-500 dark:text-gray-400">实际到账</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                {% for t in batch_transfers %}
+                                <tr>
+                                    <td class="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{{ t.to_user.username }}</td>
+                                    <td class="px-4 py-2 text-sm text-right text-gray-900 dark:text-gray-100">{{ t.amount }}</td>
+                                    <td class="px-4 py-2 text-sm text-right text-red-500">{{ t.fee_amount }}</td>
+                                    <td class="px-4 py-2 text-sm text-right text-green-500">{{ t.actual_amount }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="border-t-2 border-gray-200 dark:border-gray-700">
+                                    <td class="px-4 py-2 text-sm font-medium">总计</td>
+                                    <td class="px-4 py-2 text-sm text-right font-medium">{{ batch_transfers|sum(attribute='amount') }}</td>
+                                    <td class="px-4 py-2 text-sm text-right font-medium text-red-500">{{ batch_transfers|sum(attribute='fee_amount') }}</td>
+                                    <td class="px-4 py-2 text-sm text-right font-medium text-green-500">{{ batch_transfers|sum(attribute='actual_amount') }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">转账金额</div>
+                                <div class="text-2xl font-bold text-red-500">-{{ transfer.amount }}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">手续费</div>
+                                <div class="text-2xl font-bold text-red-500">{{ transfer.fee_amount }}</div>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-600 dark:text-gray-400">实际到账</div>
+                                <div class="text-2xl font-bold text-green-500">{{ transfer.actual_amount }}</div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                {% endif %}
 
                 {% if transfer.message %}
                 <div>
@@ -72,6 +114,19 @@
                     </div>
                 </div>
                 {% endif %}
+
+                <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">当前点数</div>
+                            <div class="text-2xl font-bold">{{ current_user.actual_score }}</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">转账后剩余</div>
+                            <div class="text-2xl font-bold">{{ current_user.actual_score - transfer.amount }}</div>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <button onclick="submitAction('confirm')" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}DoScores - 转账{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-lg mx-auto">
+        <h1 class="text-2xl font-bold mb-8">转账</h1>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+            <div class="mb-6">
+                <div class="text-sm text-gray-600 dark:text-gray-400">当前积分</div>
+                <div class="text-3xl font-bold">{{ current_user.actual_score }}</div>
+            </div>
+
+            <form id="transferForm" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">接收用户</label>
+                    <input type="text" id="username" name="username" required
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600">
+                </div>
+
+                <div>
+                    <label for="amount" class="block text-sm font-medium text-gray-700 dark:text-gray-300">转账金额</label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <input type="number" id="amount" name="amount" min="1" required
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 sm:text-sm">积分</span>
+                        </div>
+                    </div>
+                    <p class="mt-1 text-sm text-gray-500">超过1000积分将收取7%手续费</p>
+                </div>
+
+                <div>
+                    <label for="message" class="block text-sm font-medium text-gray-700 dark:text-gray-300">转账说明（可选）</label>
+                    <textarea id="message" name="message" rows="3"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary dark:bg-gray-700 dark:border-gray-600"></textarea>
+                </div>
+
+                <div id="feePreview" class="hidden space-y-2 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">转账金额</span>
+                        <span class="font-medium" id="transferAmount">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">手续费(7%)</span>
+                        <span class="font-medium text-red-500" id="feeAmount">0</span>
+                    </div>
+                    <div class="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-2">
+                        <span class="text-sm font-medium">实际到账</span>
+                        <span class="font-medium text-green-500" id="actualAmount">0</span>
+                    </div>
+                </div>
+
+                <button type="submit"
+                    class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    确认转账
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const amountInput = document.getElementById('amount');
+const feePreview = document.getElementById('feePreview');
+const transferAmountEl = document.getElementById('transferAmount');
+const feeAmountEl = document.getElementById('feeAmount');
+const actualAmountEl = document.getElementById('actualAmount');
+
+amountInput.addEventListener('input', function(e) {
+    const amount = parseInt(e.target.value) || 0;
+    if (amount > 0) {
+        const fee = amount > 1000 ? Math.floor(amount * 0.07) : 0;
+        const actual = amount - fee;
+        
+        transferAmountEl.textContent = amount;
+        feeAmountEl.textContent = fee;
+        actualAmountEl.textContent = actual;
+        feePreview.classList.remove('hidden');
+    } else {
+        feePreview.classList.add('hidden');
+    }
+});
+
+document.getElementById('transferForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        username: document.getElementById('username').value,
+        amount: parseInt(document.getElementById('amount').value),
+        message: document.getElementById('message').value
+    };
+    
+    try {
+        const response = await fetch('/api/score/transfer', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            window.location.href = result.confirm_url;
+        } else {
+            alert(result.error || '转账请求失败');
+        }
+    } catch (error) {
+        console.error('提交请求时发生错误:', error);
+        alert('提交请求失败，请重试');
+    }
+});
+</script>
+{% endblock %}

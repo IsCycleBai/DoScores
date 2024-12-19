@@ -1,0 +1,48 @@
+{% extends "admin/master.html" %}
+
+{% block title %}用户管理 - 管理后台{% endblock %}
+
+{% block page_title %}用户管理{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>用户名</th>
+                        <th>论坛ID</th>
+                        <th>名称</th>
+                        <th>信任等级</th>
+                        <th>原始点数</th>
+                        <th>实际点数</th>
+                        <th>最后更新</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.forum_id }}</td>
+                        <td>{{ user.name }}</td>
+                        <td>{{ user.trust_level }}</td>
+                        <td>{{ user.original_score }}</td>
+                        <td>{{ user.actual_score }}</td>
+                        <td>{{ user.last_updated.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <a href="{{ url_for('admin.edit_user', id=user.id) }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-pencil"></i> 编辑
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

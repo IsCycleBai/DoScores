@@ -1,0 +1,146 @@
+{% extends "admin/master.html" %}
+
+{% block title %}仪表盘 - 管理后台{% endblock %}
+
+{% block page_title %}仪表盘{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">用户总数</h5>
+                <p class="card-text display-6">{{ users|length }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">应用总数</h5>
+                <p class="card-text display-6">{{ apps|length }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">消费记录数</h5>
+                <p class="card-text display-6">{{ consumptions|length }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">转账记录数</h5>
+                <p class="card-text display-6">{{ transfers|length }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">最近用户</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>实际点数</th>
+                                <th>信任等级</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users[:5] %}
+                            <tr>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.actual_score }}</td>
+                                <td>{{ user.trust_level }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">最近应用</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>应用名称</th>
+                                <th>所有者</th>
+                                <th>创建时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app in apps[:5] %}
+                            <tr>
+                                <td>{{ app.name }}</td>
+                                <td>{{ app.owner.username }}</td>
+                                <td>{{ app.created_at.strftime('%Y-%m-%d') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">最近消费记录</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>用户</th>
+                                <th>应用</th>
+                                <th>数量</th>
+                                <th>用途</th>
+                                <th>状态</th>
+                                <th>时间</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for consumption in consumptions[:5] %}
+                            <tr>
+                                <td>{{ consumption.user.username }}</td>
+                                <td>{{ consumption.app.name }}</td>
+                                <td>{{ consumption.amount }}</td>
+                                <td>{{ consumption.purpose }}</td>
+                                <td>
+                                    <span class="badge {% if consumption.status == 'confirmed' %}bg-success{% elif consumption.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                        {{ consumption.status }}
+                                    </span>
+                                </td>
+                                <td>{{ consumption.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

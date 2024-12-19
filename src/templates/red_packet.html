@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}红包 - DoScores{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    {% if red_packet %}
+    <div class="bg-red-100 dark:bg-red-900 rounded-lg p-8 text-center mb-8">
+        <h1 class="text-2xl font-bold mb-4">{{ red_packet.from_user.username }} 的红包</h1>
+        {% if red_packet.message %}
+        <p class="text-lg mb-4">{{ red_packet.message }}</p>
+        {% endif %}
+        
+        {% if claimed_record %}
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 mb-4">
+            <p class="text-xl mb-2">恭喜你抢到了</p>
+            <p class="text-3xl font-bold text-red-600 dark:text-red-400">{{ claimed_record.amount }} 分</p>
+        </div>
+        {% elif red_packet.is_expired() %}
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
+            <p class="text-xl">红包已过期</p>
+        </div>
+        {% elif red_packet.is_finished() %}
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
+            <p class="text-xl">红包已被抢完</p>
+        </div>
+        {% elif not red_packet.can_claim(current_user) %}
+        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-6">
+            <p class="text-xl">无法领取此红包</p>
+            {% if current_user.trust_level < red_packet.min_trust_level %}
+            <p class="text-sm mt-2">需要信任等级 {{ red_packet.min_trust_level }}</p>
+            {% endif %}
+        </div>
+        {% else %}
+        <form method="post" class="mt-4">
+            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg text-lg">
+                抢红包
+            </button>
+        </form>
+        {% endif %}
+        
+        <div class="mt-8">
+            <p class="text-sm">
+                总金额: {{ red_packet.total_amount }} 分 / 
+                剩余: {{ red_packet.remaining_amount }} 分
+            </p>
+            <p class="text-sm">
+                总数量: {{ red_packet.total_count }} 个 / 
+                剩余: {{ red_packet.remaining_count }} 个
+            </p>
+        </div>
+        
+        {% if red_packet.records %}
+        <div class="mt-8">
+            <h2 class="text-xl font-bold mb-4">领取记录</h2>
+            <div class="space-y-2">
+                {% for record in red_packet.records %}
+                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 flex justify-between items-center">
+                    <span>{{ record.user.username }}</span>
+                    <span class="font-bold">{{ record.amount }} 分</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if current_user.is_authenticated %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow">
+        <h2 class="text-xl font-bold mb-4">发红包</h2>
+        <form method="post" action="{{ url_for('create_red_packet') }}" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">总金额</label>
+                <input type="number" name="total_amount" required min="1" 
+                       class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-1">红包个数</label>
+                <input type="number" name="total_count" required min="1" 
+                       class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-1">祝福语(可选)</label>
+                <input type="text" name="message" maxlength="256"
+                       class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-1">最低信任等级</label>
+                <input type="number" name="min_trust_level" required min="0" value="0"
+                       class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-1">用户名白名单(可选，用逗号分隔)</label>
+                <input type="text" name="whitelist" 
+                       class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-1">用户名黑名单(可选，用逗号分隔)</label>
+                <input type="text" name="blacklist"
+                       class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium mb-1">有效期(小时，可选)</label>
+                <input type="number" name="expire_hours" min="1"
+                       class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600">
+            </div>
+            
+            <button type="submit" 
+                    class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">
+                发红包
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

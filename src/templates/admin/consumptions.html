@@ -1,0 +1,75 @@
+{% extends "admin/master.html" %}
+
+{% block title %}消费记录 - 管理后台{% endblock %}
+
+{% block page_title %}消费记录{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>用户</th>
+                        <th>应用</th>
+                        <th>数量</th>
+                        <th>用途</th>
+                        <th>状态</th>
+                        <th>确认令牌</th>
+                        <th>确认时间</th>
+                        <th>创建时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for consumption in consumptions %}
+                    <tr>
+                        <td>{{ consumption.id }}</td>
+                        <td>{{ consumption.user.username }}</td>
+                        <td>{{ consumption.app.name }}</td>
+                        <td>{{ consumption.amount }}</td>
+                        <td>{{ consumption.purpose }}</td>
+                        <td>
+                            <span class="badge {% if consumption.status == 'confirmed' %}bg-success{% elif consumption.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                {{ consumption.status }}
+                            </span>
+                        </td>
+                        <td><code>{{ consumption.confirm_token }}</code></td>
+                        <td>{{ consumption.confirmed_at.strftime('%Y-%m-%d %H:%M') if consumption.confirmed_at else '-' }}</td>
+                        <td>{{ consumption.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">总消费记录数</h5>
+                <p class="card-text display-6">{{ consumptions|length }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">已确认消费</h5>
+                <p class="card-text display-6">{{ consumptions|selectattr('status', 'equalto', 'confirmed')|list|length }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">待确认消费</h5>
+                <p class="card-text display-6">{{ consumptions|selectattr('status', 'equalto', 'pending')|list|length }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
