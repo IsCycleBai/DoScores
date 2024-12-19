@@ -109,55 +109,48 @@ def login():
     return oauth.linux_do.authorize_redirect(redirect_uri)
 
 @app.route('/oauth2/callback')
-async def oauth2_callback():
-    token = await oauth.linux_do.authorize_access_token()
-    resp = await oauth.linux_do.get('user')
+def oauth2_callback():
+    token = oauth.linux_do.authorize_access_token()
+    resp = oauth.linux_do.get('user')
     user_info = resp.json()
     
     # 获取用户点数
-    async def get_score(use_proxy=False):
+    def get_score():
         try:
-            client = httpx.AsyncClient(
-                timeout=30.0,
-                verify=False
-            )
+            import requests
+            session = requests.Session()
+            session.verify = False
             
+            # 全局代理配置
+            use_proxy = os.getenv('USE_PROXY', 'false').lower() == 'true'
             if use_proxy:
-                proxy = os.getenv('ZENROWS_PROXY')
-                if not proxy:
-                    raise ValueError("未配置ZENROWS_PROXY环境变量")
-                client.proxies = {
-                    "http://": proxy,
-                    "https://": proxy
-                }
-                app.logger.info(f"使用代理重试获取用户 {user_info['username']} 的点数信息")
+                proxy = os.getenv('HTTP_PROXY')
+                if proxy:
+                    session.proxies = {
+                        "http": proxy,
+                        "https": proxy
+                    }
+                    app.logger.info(f"使用代理获取用户 {user_info['username']} 的点数信息")
             else:
                 app.logger.info(f"开始获取用户 {user_info['username']} 的点数信息")
             
-            score_resp = await client.get(
-                f"https://linux.do/u/{user_info['username']}.json"
+            score_resp = session.get(
+                f"https://linux.do/u/{user_info['username']}.json",
+                timeout=30.0
             )
-            
-            if score_resp.status_code == 403 and not use_proxy:
-                await client.aclose()
-                return await get_score(use_proxy=True)
-                
             score_resp.raise_for_status()
             score_data = score_resp.json()
             
             if not score_data or 'user' not in score_data:
                 raise ValueError("响应数据格式错误")
                 
-            await client.aclose()
             return score_data['user'].get('gamification_score', 0)
             
         except Exception as e:
-            app.logger.error(f"获取用户点数{'(使用代理)' if use_proxy else ''} 失败: {str(e)}")
-            if not use_proxy and isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 403:
-                return await get_score(use_proxy=True)
+            app.logger.error(f"获取用户点数失败: {str(e)}")
             return 0
     
-    gamification_score = await get_score()
+    gamification_score = get_score()
     
     user = User.query.filter_by(forum_id=user_info['id']).first()
     if user:
